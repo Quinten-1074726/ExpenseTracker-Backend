@@ -1,5 +1,6 @@
 import express from 'express';
 import Expense from '../models/Expense.js';
+import { de } from '@faker-js/faker';
 
 const router = express.Router();
 
@@ -34,6 +35,76 @@ router.post('/seed', async (req, res) => {
     } catch (error) {
         console.error('Seed error:', error);
         res.status(500).json({ error: error.message });
+    }
+});
+
+router.get('/expenses', async (req, res) => {
+    try {
+        const expenses = await Expense.find();
+        res.json(expenses);
+    }
+    catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+    
+router.get('/expenses/:id', async (req, res) => {
+    try {
+        const expense = await Expense.findById(req.params.id);
+        if (!expense) {
+            return res.status(404).json({ error: 'Expense not found' });
+        }
+        res.json(expense);
+    } 
+    catch (error) {
+        res.status(400).json({ error: 'Invalid ID' });
+    }
+});
+
+router.post('/expenses', async (req, res) => {
+    try {
+        const { title, description, amount, date, category } = req.body;
+        if (![title, description, amount, date, category].every(field => typeof field === 'string' && field.trim() !== '')) {
+            return res.status(400).json({ error: 'All fields are required' });
+        }
+        const createdExpense = await Expense.create({ title, description, amount, date, category });
+        res.status(201).json(createdExpense);
+    } 
+    catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});       
+
+router.put('/expenses/:id', async (req, res) => {
+  try {
+    const { title, description, amount, date, category } = req.body;
+
+    if (![title, description, amount, date, category].every(v => typeof v === 'string' && v.trim() !== '')) {
+      return res.status(400).json({ error: 'All fields are required and must be non-empty strings.' });
+    }
+
+    const updated = await Expense.findByIdAndUpdate(
+      req.params.id,
+      { title, description, amount, date, category },
+      { new: true }
+    );
+
+    if (!updated) return res.status(404).json({ error: 'Not found' });
+    res.json(updated);
+  } 
+catch (error) {
+    res.status(400).json({ error: 'Invalid id' });
+  }
+});
+
+router.delete('/expenses/:id', async (req, res) => {
+  try {
+    const deleted = await Expense.findByIdAndDelete(req.params.id);     
+    if (!deleted) return  res.status(404).json({ error: 'Not found' });
+    res.json({ message: 'Expense deleted', id: deleted._id });
+  }
+catch (error) {
+    res.status(400).json({ error: 'Invalid id' });
     }
 });
 
