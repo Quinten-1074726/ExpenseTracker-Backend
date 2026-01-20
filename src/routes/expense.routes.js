@@ -2,7 +2,24 @@ import express from 'express';
 import Expense from '../models/Expense.js';
 import { de } from '@faker-js/faker';
 
+function requireJsonHeader(req, res, next) {
+    if (!req.accepts('application/json')) {
+        return res.status(406).json({ error: 'Not Acceptable. This API only serves application/json' });
+    }
+    next();
+}
+
+function requireJsonContentType(req, res, next) {
+  if (req.method === 'POST' || req.method === 'PUT') {
+    if (!req.is('application/json')) {
+      return res.status(415).json({ error: 'Content-Type must be application/json.' });
+    }
+  }
+  next();
+}
+
 const router = express.Router();
+router.use(['/expenses', '/expenses/:id', '/seed'], requireJsonHeader, requireJsonContentType);
 
 router.post('/seed', async (req, res) => {
     try {
@@ -106,6 +123,15 @@ router.delete('/expenses/:id', async (req, res) => {
 catch (error) {
     res.status(400).json({ error: 'Invalid id' });
     }
+});
+
+router.options('/expenses', (req, res) => {
+    res.set('Allow', 'GET,POST,OPTIONS').send();
+    return res.status(204).send();                                         
+});
+router.options('/expenses/:id', (req, res) => {
+    res.set('Allow', 'GET,PUT,DELETE,OPTIONS').send();
+    return res.status(204).send();
 });
 
 export default router;
