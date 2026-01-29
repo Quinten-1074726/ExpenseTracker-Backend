@@ -7,29 +7,26 @@ import expenseRoutes from "./routes/expense.routes.js";
 dotenv.config();
 
 const app = express();
-
-// body parser
 app.use(express.json());
 
-// CORS (laat methods weg, anders krijg je vaak "too many options" bij de checker)
+// Belangrijk: preflightContinue: true zodat cors() OPTIONS NIET afhandelt,
+// maar alleen headers zet en jouw router.options() kan antwoorden.
 app.use(
   cors({
     origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Accept"],
+    preflightContinue: true,
   })
 );
 
-// DB connect
 await connectDB(process.env.MONGO_URI);
 
-// root
 app.get("/", (req, res) => {
   res.json({ message: "Expense Tracker API running" });
 });
 
-// routes
 app.use(expenseRoutes);
 
-// start
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
