@@ -21,7 +21,7 @@ const BASE_URL = process.env.BASE_URL || "http://145.24.237.232:8001";
 
 function toExpenseResource(expense) {
   return {
-    _id: expense._id,
+    id: String(expense._id),        
     title: expense.title,
     description: expense.description,
     amount: expense.amount,
@@ -92,11 +92,13 @@ router.get("/expenses", async (req, res) => {
   try {
     const expenses = await Expense.find();
     res.json({
-      items: expenses.map(toExpenseResource),
-      _links: {
+    items: expenses.map(toExpenseResource),
+    _links: {
         self: { href: `${BASE_URL}/expenses` },
-      },
+        collection: { href: `${BASE_URL}/expenses` },
+    },
     });
+
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -159,5 +161,16 @@ catch (error) {
     res.status(400).json({ error: 'Invalid id' });
     }
 });
+
+router.options("/expenses", (req, res) => {
+  res.set("Allow", "GET,POST,OPTIONS");
+  return res.status(204).send();
+});
+
+router.options("/expenses/:id", (req, res) => {
+  res.set("Allow", "GET,PUT,DELETE,OPTIONS");
+  return res.status(204).send();
+});
+
 
 export default router;
