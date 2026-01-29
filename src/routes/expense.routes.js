@@ -3,20 +3,23 @@ import Expense from '../models/Expense.js';
 import { de } from '@faker-js/faker';
 
 function requireJsonHeader(req, res, next) {
-    if (!req.accepts('application/json')) {
-        return res.status(406).json({ error: 'Not Acceptable. This API only serves application/json' });
-    }
-    next();
+  if (req.method === "OPTIONS") return next();  
+  if (!req.accepts("application/json")) {
+    return res.status(406).json({ error: "Not Acceptable. This API only serves application/json" });
+  }
+  next();
 }
 
 function requireJsonContentType(req, res, next) {
-  if (req.method === 'POST' || req.method === 'PUT') {
-    if (!req.is('application/json')) {
-      return res.status(415).json({ error: 'Content-Type must be application/json.' });
+  if (req.method === "OPTIONS") return next();   
+  if (req.method === "POST" || req.method === "PUT") {
+    if (!req.is("application/json")) {
+      return res.status(415).json({ error: "Content-Type must be application/json." });
     }
   }
   next();
 }
+
 const BASE_URL = process.env.BASE_URL || "http://145.24.237.232:8001";
 
 function toExpenseResource(expense) {
@@ -32,6 +35,18 @@ function toExpenseResource(expense) {
     _links: {
       self: { href: `${BASE_URL}/expenses/${expense._id}` },
       collection: { href: `${BASE_URL}/expenses` },
+    },
+  };
+}
+
+function toExpenseListItem(expense) {
+  return {
+    id: String(expense._id),
+    title: expense.title,
+    amount: expense.amount,
+    date: expense.date,
+    _links: {
+      self: { href: `${BASE_URL}/expenses/${expense._id}` },
     },
   };
 }
@@ -104,13 +119,12 @@ router.get("/expenses", async (req, res) => {
   try {
     const expenses = await Expense.find();
     res.json({
-    items: expenses.map(toExpenseResource),
-    _links: {
+      items: expenses.map(toExpenseListItem),   
+      _links: {
         self: { href: `${BASE_URL}/expenses` },
         collection: { href: `${BASE_URL}/expenses` },
-    },
+      },
     });
-
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
