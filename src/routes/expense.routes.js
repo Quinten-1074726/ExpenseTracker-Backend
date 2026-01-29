@@ -115,6 +115,19 @@ router.post("/seed", async (req, res) => {
     }
 });
 
+router.all("/expenses", (req, res, next) => {
+  if (["GET", "POST", "OPTIONS"].includes(req.method)) return next();
+  res.set("Allow", "GET,POST,OPTIONS");
+  return res.sendStatus(405);
+});
+
+router.all("/expenses/:id", (req, res, next) => {
+  if (["GET", "PUT", "DELETE", "OPTIONS"].includes(req.method)) return next();
+  res.set("Allow", "GET,PUT,DELETE,OPTIONS");
+  return res.sendStatus(405);
+});
+
+
 router.get("/expenses", async (req, res) => {
   try {
     const expenses = await Expense.find();
@@ -195,20 +208,5 @@ router.delete("/expenses/:id", async (req, res) => {
   }
 });
 
-router.options("/expenses", (req, res) => {
-  res.set("Allow", "GET,POST,OPTIONS");
-  res.set("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-  res.set("Access-Control-Allow-Headers", "Content-Type, Accept");
-  res.set("Access-Control-Allow-Origin", "*");
-  return res.sendStatus(204);
-});
-
-router.options("/expenses/:id", (req, res) => {
-  res.set("Allow", "GET,PUT,DELETE,OPTIONS");
-  res.set("Access-Control-Allow-Methods", "GET,PUT,DELETE,OPTIONS");
-  res.set("Access-Control-Allow-Headers", "Content-Type, Accept");
-  res.set("Access-Control-Allow-Origin", "*");
-  return res.sendStatus(204);
-});
 
 export default router;
