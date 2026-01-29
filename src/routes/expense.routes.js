@@ -132,7 +132,7 @@ router.get("/expenses", async (req, res) => {
   try {
     const expenses = await Expense.find();
     res.json({
-      items: expenses.map(toExpenseListItem),   
+      items: expenses.map(toExpenseResource), // 👈 volledige items
       _links: {
         self: { href: `${BASE_URL}/expenses` },
         collection: { href: `${BASE_URL}/expenses` },
@@ -208,5 +208,20 @@ router.delete("/expenses/:id", async (req, res) => {
   }
 });
 
+router.options("/expenses", (req, res) => {
+  res.set("Allow", "GET,POST,OPTIONS");
+  res.set("Access-Control-Allow-Origin", "*");
+  res.set("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  res.set("Access-Control-Allow-Headers", "Content-Type, Accept");
+  return res.sendStatus(204);
+});
+
+router.options("/expenses/:id", (req, res) => {
+  res.set("Allow", "GET,PUT,DELETE,OPTIONS");
+  res.set("Access-Control-Allow-Origin", "*");
+  res.set("Access-Control-Allow-Methods", "GET,PUT,DELETE,OPTIONS");
+  res.set("Access-Control-Allow-Headers", "Content-Type, Accept");
+  return res.sendStatus(204);
+});
 
 export default router;
