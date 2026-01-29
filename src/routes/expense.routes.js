@@ -36,10 +36,16 @@ function toExpenseResource(expense) {
   };
 }
 
+function asNonEmptyString(v) {
+  if (typeof v === "number") return String(v);
+  if (typeof v !== "string") return "";
+  return v.trim();
+}
+
 const router = express.Router();
 router.use(['/expenses', '/expenses/:id', '/seed'], requireJsonHeader, requireJsonContentType);
 
-router.post('/seed', async (req, res) => {
+router.post("/seed", async (req, res) => {
     try {
         await Expense.deleteMany({});
         const created = await Expense.create([
@@ -81,9 +87,15 @@ router.post('/seed', async (req, res) => {
 
         ]);
 
-        res.status(201).json(created);
+        res.status(201).json({
+        items: created.map(toExpenseResource),
+        _links: {
+            self: { href: `${BASE_URL}/seed` },
+            collection: { href: `${BASE_URL}/expenses` },
+        },
+        });
     } catch (error) {
-        console.error('Seed error:', error);
+        console.error("Seed error:", error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -114,27 +126,35 @@ router.get("/expenses/:id", async (req, res) => {
   }
 });
 
-router.post('/expenses', async (req, res) => {
-    try {
-        const { title, description, amount, date, category } = req.body;
-        if (![title, description, amount, date, category].every(field => typeof field === 'string' && field.trim() !== '')) {
-            return res.status(400).json({ error: 'All fields are required' });
-        }
-        const createdExpense = await Expense.create({ title, description, amount, date, category });
-        res.status(201).json(toExpenseResource(createdExpense));
-
-    } 
-    catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});       
-
-router.put('/expenses/:id', async (req, res) => {
+router.post("/expenses", async (req, res) => {
   try {
-    const { title, description, amount, date, category } = req.body;
+    const title = asNonEmptyString(req.body.title);
+    const description = asNonEmptyString(req.body.description);
+    const amount = asNonEmptyString(req.body.amount);
+    const date = asNonEmptyString(req.body.date);
+    const category = asNonEmptyString(req.body.category);
 
-    if (![title, description, amount, date, category].every(v => typeof v === 'string' && v.trim() !== '')) {
-      return res.status(400).json({ error: 'All fields are required and must be non-empty strings.' });
+    if (![title, description, amount, date, category].every(Boolean)) {
+      return res.status(400).json({ error: "All fields are required" });
+    }
+
+    const createdExpense = await Expense.create({ title, description, amount, date, category });
+    return res.status(201).json(toExpenseResource(createdExpense));
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});     
+
+router.put("/expenses/:id", async (req, res) => {
+  try {
+    const title = asNonEmptyString(req.body.title);
+    const description = asNonEmptyString(req.body.description);
+    const amount = asNonEmptyString(req.body.amount);
+    const date = asNonEmptyString(req.body.date);
+    const category = asNonEmptyString(req.body.category);
+
+    if (![title, description, amount, date, category].every(Boolean)) {
+      return res.status(400).json({ error: "All fields are required and must be non-empty." });
     }
 
     const updated = await Expense.findByIdAndUpdate(
@@ -143,11 +163,10 @@ router.put('/expenses/:id', async (req, res) => {
       { new: true }
     );
 
-    if (!updated) return res.status(404).json({ error: 'Not found' });
-    res.json(toExpenseResource(updated));
-  } 
-catch (error) {
-    res.status(400).json({ error: 'Invalid id' });
+    if (!updated) return res.status(404).json({ error: "Not found" });
+    return res.json(toExpenseResource(updated));
+  } catch {
+    return res.status(400).json({ error: "Invalid id" });
   }
 });
 
@@ -155,22 +174,17 @@ router.delete('/expenses/:id', async (req, res) => {
   try {
     const deleted = await Expense.findByIdAndDelete(req.params.id);     
     if (!deleted) return  res.status(404).json({ error: 'Not found' });
-    res.json({ message: 'Expense deleted', id: deleted._id });
+    res.json({
+        message: "Expense deleted",
+        id: String(deleted._id),
+        _links: {
+            collection: { href: `${BASE_URL}/expenses` },
+        },
+    });
   }
 catch (error) {
     res.status(400).json({ error: 'Invalid id' });
     }
 });
-
-router.options("/expenses", (req, res) => {
-  res.set("Allow", "GET,POST,OPTIONS");
-  return res.status(204).send();
-});
-
-router.options("/expenses/:id", (req, res) => {
-  res.set("Allow", "GET,PUT,DELETE,OPTIONS");
-  return res.status(204).send();
-});
-
 
 export default router;
