@@ -15,7 +15,7 @@ const corsOptions = {
 const app = express();
 app.use(express.json());
 app.use(cors(corsOptions));
-app.options("/*", cors(corsOptions));
+app.options(/.*/, cors(corsOptions));
 
 await connectDB(process.env.MONGO_URI);
 
