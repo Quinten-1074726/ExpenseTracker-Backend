@@ -17,6 +17,24 @@ function requireJsonContentType(req, res, next) {
   }
   next();
 }
+const BASE_URL = process.env.BASE_URL || "http://145.24.237.232:8001";
+
+function toExpenseResource(expense) {
+  return {
+    _id: expense._id,
+    title: expense.title,
+    description: expense.description,
+    amount: expense.amount,
+    date: expense.date,
+    category: expense.category,
+    createdAt: expense.createdAt,
+    updatedAt: expense.updatedAt,
+    _links: {
+      self: { href: `${BASE_URL}/expenses/${expense._id}` },
+      collection: { href: `${BASE_URL}/expenses` },
+    },
+  };
+}
 
 const router = express.Router();
 router.use(['/expenses', '/expenses/:id', '/seed'], requireJsonHeader, requireJsonContentType);
@@ -40,12 +58,27 @@ router.post('/seed', async (req, res) => {
             category: 'Travel',
         },
         {
-            title: 'Netflix Abonnement',
-            description: 'Maandelijkse kosten',
-            amount: '14.50',
-            date: '2026-01-19',
-            category: 'Entertainment',
+            title: 'Kleding',
+            description: 'Kleding H&M',
+            amount: '60.00',
+            date: '2026-01-20',
+            category: 'Shopping',
         },
+        {
+            title: 'Nike Air Force',
+            description: 'Nike Air Force schoenen',
+            amount: '100.00',
+            date: '2026-01-21',
+            category: 'Shopping',
+        },
+        {
+            title: 'Tafel',
+            description: 'Tafel IKEA',
+            amount: '150.00',
+            date: '2026-01-22',
+            category: 'Home',
+        },
+
         ]);
 
         res.status(201).json(created);
@@ -55,27 +88,28 @@ router.post('/seed', async (req, res) => {
     }
 });
 
-router.get('/expenses', async (req, res) => {
-    try {
-        const expenses = await Expense.find();
-        res.json(expenses);
-    }
-    catch (error) {
-        res.status(500).json({ error: error.message });
-    }
+router.get("/expenses", async (req, res) => {
+  try {
+    const expenses = await Expense.find();
+    res.json({
+      items: expenses.map(toExpenseResource),
+      _links: {
+        self: { href: `${BASE_URL}/expenses` },
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
     
-router.get('/expenses/:id', async (req, res) => {
-    try {
-        const expense = await Expense.findById(req.params.id);
-        if (!expense) {
-            return res.status(404).json({ error: 'Expense not found' });
-        }
-        res.json(expense);
-    } 
-    catch (error) {
-        res.status(400).json({ error: 'Invalid ID' });
-    }
+router.get("/expenses/:id", async (req, res) => {
+  try {
+    const expense = await Expense.findById(req.params.id);
+    if (!expense) return res.status(404).json({ error: "Expense not found" });
+    res.json(toExpenseResource(expense));
+  } catch {
+    res.status(400).json({ error: "Invalid ID" });
+  }
 });
 
 router.post('/expenses', async (req, res) => {
@@ -85,7 +119,8 @@ router.post('/expenses', async (req, res) => {
             return res.status(400).json({ error: 'All fields are required' });
         }
         const createdExpense = await Expense.create({ title, description, amount, date, category });
-        res.status(201).json(createdExpense);
+        res.status(201).json(toExpenseResource(createdExpense));
+
     } 
     catch (error) {
         res.status(500).json({ error: error.message });
@@ -107,7 +142,7 @@ router.put('/expenses/:id', async (req, res) => {
     );
 
     if (!updated) return res.status(404).json({ error: 'Not found' });
-    res.json(updated);
+    res.json(toExpenseResource(updated));
   } 
 catch (error) {
     res.status(400).json({ error: 'Invalid id' });
@@ -123,15 +158,6 @@ router.delete('/expenses/:id', async (req, res) => {
 catch (error) {
     res.status(400).json({ error: 'Invalid id' });
     }
-});
-
-router.options('/expenses', (req, res) => {
-    res.set('Allow', 'GET,POST,OPTIONS').send();
-    return res.status(204).send();                                         
-});
-router.options('/expenses/:id', (req, res) => {
-    res.set('Allow', 'GET,PUT,DELETE,OPTIONS').send();
-    return res.status(204).send();
 });
 
 export default router;

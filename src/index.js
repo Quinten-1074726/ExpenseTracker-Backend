@@ -6,9 +6,16 @@ import expenseRoutes from './routes/expense.routes.js';
 
 dotenv.config();
 
+const corsOptions = {
+  origin: "*",
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Accept"],
+};
+
 const app = express();
-app.use(cors());
 app.use(express.json());
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions)); 
 
 await connectDB(process.env.MONGO_URI);
 
