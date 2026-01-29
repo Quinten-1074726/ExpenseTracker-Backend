@@ -170,21 +170,31 @@ router.put("/expenses/:id", async (req, res) => {
   }
 });
 
-router.delete('/expenses/:id', async (req, res) => {
+router.delete("/expenses/:id", async (req, res) => {
   try {
-    const deleted = await Expense.findByIdAndDelete(req.params.id);     
-    if (!deleted) return  res.status(404).json({ error: 'Not found' });
-    res.json({
-        message: "Expense deleted",
-        id: String(deleted._id),
-        _links: {
-            collection: { href: `${BASE_URL}/expenses` },
-        },
-    });
+    const deleted = await Expense.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ error: "Not found" });
+
+    return res.sendStatus(204); 
+  } catch (error) {
+    return res.status(400).json({ error: "Invalid id" });
   }
-catch (error) {
-    res.status(400).json({ error: 'Invalid id' });
-    }
+});
+
+router.options("/expenses", (req, res) => {
+  res.set("Allow", "GET,POST,OPTIONS");
+  res.set("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  res.set("Access-Control-Allow-Headers", "Content-Type, Accept");
+  res.set("Access-Control-Allow-Origin", "*");
+  return res.sendStatus(204);
+});
+
+router.options("/expenses/:id", (req, res) => {
+  res.set("Allow", "GET,PUT,DELETE,OPTIONS");
+  res.set("Access-Control-Allow-Methods", "GET,PUT,DELETE,OPTIONS");
+  res.set("Access-Control-Allow-Headers", "Content-Type, Accept");
+  res.set("Access-Control-Allow-Origin", "*");
+  return res.sendStatus(204);
 });
 
 export default router;
