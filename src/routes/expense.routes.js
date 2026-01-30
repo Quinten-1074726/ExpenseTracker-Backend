@@ -176,7 +176,7 @@ router.get("/expenses", async (req, res) => {
 
     if (limit === undefined) {
       expenses = await Expense.find();
-      totalPages = totalItems === 0 ? 1 : 1;
+      totalPages = totalItems === 0 ? 1 : page;
     } else {
       totalPages = totalItems === 0 ? 1 : Math.ceil(totalItems / limit);
 
