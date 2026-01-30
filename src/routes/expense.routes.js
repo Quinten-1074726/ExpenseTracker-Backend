@@ -175,9 +175,13 @@ router.get("/expenses", async (req, res) => {
     let totalPages;
 
     if (limit === undefined) {
+      if (page !== 1) {
+        return res.status(404).json({ error: "Page not found" });
+      }
       expenses = await Expense.find();
-      totalPages = totalItems === 0 ? 1 : page;
-    } else {
+      totalPages = totalItems === 0 ? 1 : 1;
+      }
+      else {
       totalPages = totalItems === 0 ? 1 : Math.ceil(totalItems / limit);
 
       if (page > totalPages && totalItems > 0) {
