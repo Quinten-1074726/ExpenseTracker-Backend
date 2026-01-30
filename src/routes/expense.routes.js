@@ -129,6 +129,13 @@ router.post("/seed", async (req, res) => {
             date: '2026-01-22',
             category: 'Home',
         },
+        {
+            title: 'Grasmaaier',
+            description: 'Grasmaaier ',
+            amount: '100.00',
+            date: '2026-01-23',
+            category: 'Home',
+        },
 
         ]);
 
