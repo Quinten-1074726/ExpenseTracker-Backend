@@ -156,17 +156,17 @@ router.get("/expenses", async (req, res) => {
   try {
     const base = `${BASE_URL}/expenses`;
 
-    const hasLimit = req.query.limit !== undefined;
     const pageRaw = req.query.page;
     const limitRaw = req.query.limit;
 
-    let page = pageRaw ? parseInt(pageRaw, 10) : 1;
+    const hasLimit = limitRaw !== undefined && limitRaw !== null && limitRaw !== "";
 
-    if (pageRaw !== undefined && (!Number.isInteger(page) || page < 1)) {
+    const currentPage = pageRaw ? parseInt(pageRaw, 10) : 1;
+    if (!Number.isInteger(currentPage) || currentPage < 1) {
       return res.status(400).json({ error: "page must be an integer >= 1" });
     }
 
-    let limit;
+    let limit = null;
     if (hasLimit) {
       limit = parseInt(limitRaw, 10);
       if (!Number.isInteger(limit) || limit < 1) {
@@ -177,59 +177,66 @@ router.get("/expenses", async (req, res) => {
     const totalItems = await Expense.countDocuments();
 
     let items = [];
+    let totalPages = 1;
 
     if (!hasLimit) {
-      page = 1;
+      if (currentPage !== 1) {
+        return res.status(404).json({ error: "Page not found" });
+      }
       items = await Expense.find();
+      totalPages = 1;
     } else {
-      const pageCount = totalItems === 0 ? 1 : Math.ceil(totalItems / limit);
+      totalPages = totalItems === 0 ? 1 : Math.ceil(totalItems / limit);
 
-      if (page > pageCount && totalItems > 0) {
+      if (currentPage > totalPages && totalItems > 0) {
         return res.status(404).json({ error: "Page not found" });
       }
 
-      const skip = (page - 1) * limit;
+      const skip = (currentPage - 1) * limit;
       items = await Expense.find().skip(skip).limit(limit);
     }
 
-    const selfHref = hasLimit ? `${BASE_URL}${req.originalUrl}` : base;
+    const selfHref = hasLimit
+      ? `${base}?page=${currentPage}&limit=${limit}`
+      : base;
 
-    const computedPageCount =
-      hasLimit
-        ? (totalItems === 0 ? 1 : Math.ceil(totalItems / limit))
-        : (items.length === 0 ? 1 : Math.ceil(totalItems / items.length));
+    const paginationLinks = {};
 
-    const pagination = {
-      page,
-      totalItems,
-      currentItems: items.length,
+    if (hasLimit) {
+      paginationLinks.first = { page: 1, href: `${base}?page=1&limit=${limit}` };
+      paginationLinks.last = { page: totalPages, href: `${base}?page=${totalPages}&limit=${limit}` };
 
-      pagecount: computedPageCount,
-      pageCount: computedPageCount,
-      totalPages: computedPageCount,
+      paginationLinks.previous =
+        currentPage > 1
+          ? { page: currentPage - 1, href: `${base}?page=${currentPage - 1}&limit=${limit}` }
+          : null;
 
-      ...(hasLimit ? { limit } : {}),
-    };
+      paginationLinks.next =
+        currentPage < totalPages
+          ? { page: currentPage + 1, href: `${base}?page=${currentPage + 1}&limit=${limit}` }
+          : null;
+    } else {
+      paginationLinks.first = { page: 1, href: base };
+      paginationLinks.last = { page: 1, href: base };
+      paginationLinks.previous = null;
+      paginationLinks.next = null;
+    }
 
-    const response = {
+    return res.json({
       items: items.map(toExpenseListItem),
-      pagination,
       _links: {
         self: { href: selfHref },
         collection: { href: base },
       },
-    };
-
-    if (hasLimit && computedPageCount > 1) {
-      if (page < computedPageCount) {
-        response._links.next = { href: `${base}?page=${page + 1}&limit=${limit}` };
-      }
-      if (page > 1) {
-        response._links.prev = { href: `${base}?page=${page - 1}&limit=${limit}` };
-      }
-    }
-
-    return res.json(response);
+      pagination: {
+        currentPage,
+        currentItems: items.length,
+        totalPages,
+        totalItems,
+        ...(hasLimit ? { limit } : {}),
+        _links: paginationLinks,
+      },
+    });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
