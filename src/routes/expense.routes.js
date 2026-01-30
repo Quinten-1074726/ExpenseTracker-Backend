@@ -204,6 +204,7 @@ router.get("/expenses", async (req, res) => {
       page,
       totalItems,
       pageCount,
+      pagecount: pageCount,
       currentItems: items.length,
       ...(hasLimit ? { limit } : {}), 
     };
