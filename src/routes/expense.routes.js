@@ -43,13 +43,16 @@ function toExpenseListItem(expense) {
   return {
     id: String(expense._id),
     title: expense.title,
+    description: expense.description,
     amount: expense.amount,
     date: expense.date,
+    category: expense.category,
     _links: {
       self: { href: `${BASE_URL}/expenses/${expense._id}` },
     },
   };
 }
+
 
 function asNonEmptyString(v) {
   if (typeof v === "number") return String(v);
@@ -148,7 +151,7 @@ router.get("/expenses", async (req, res) => {
   try {
     const expenses = await Expense.find();
     res.json({
-      items: expenses.map(toExpenseResource), 
+      items: expenses.map(toExpenseListItem), 
       _links: {
         self: { href: `${BASE_URL}/expenses` },
         collection: { href: `${BASE_URL}/expenses` },
@@ -164,7 +167,7 @@ router.get("/expenses/:id", async (req, res) => {
     const expense = await Expense.findById(req.params.id);
     if (!expense) return res.status(404).json({ error: "Expense not found" });
     res.json(toExpenseResource(expense));
-  } catch {
+  } catch (error) {
     res.status(400).json({ error: "Invalid ID" });
   }
 });
