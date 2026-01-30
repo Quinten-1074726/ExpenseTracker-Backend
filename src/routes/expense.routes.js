@@ -180,17 +180,17 @@ router.get("/expenses", async (req, res) => {
     const totalItems = await Expense.countDocuments();
 
     let items = [];
-    let pageCount = 1;
+    let pagecount = 1;
 
     if (!hasLimit) {
       page = 1;
       items = await Expense.find();
-      pageCount = 1;
+      pagecount = 1;
     } else {
 
-      pageCount = totalItems === 0 ? 1 : Math.ceil(totalItems / limit);
+      pagecount = totalItems === 0 ? 1 : Math.ceil(totalItems / limit);
 
-      if (page > pageCount && totalItems > 0) {
+      if (page > pagecount && totalItems > 0) {
         return res.status(404).json({ error: "Page not found" });
       }
 
@@ -203,8 +203,7 @@ router.get("/expenses", async (req, res) => {
     const pagination = {
       page,
       totalItems,
-      pageCount,
-      pagecount: pageCount,
+      pagecount,
       currentItems: items.length,
       ...(hasLimit ? { limit } : {}), 
     };
@@ -218,8 +217,8 @@ router.get("/expenses", async (req, res) => {
       },
     };
 
-    if (hasLimit && pageCount > 1) {
-      if (page < pageCount) {
+    if (hasLimit && pagecount > 1) {
+      if (page < pagecount) {
         response._links.next = { href: `${base}?page=${page + 1}&limit=${limit}` };
       }
       if (page > 1) {
