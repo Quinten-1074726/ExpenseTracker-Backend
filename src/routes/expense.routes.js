@@ -160,12 +160,15 @@ router.get("/expenses", async (req, res) => {
     const pageRaw = req.query.page;
     const limitRaw = req.query.limit;
 
+    // Parse page
     let page = pageRaw ? parseInt(pageRaw, 10) : 1;
 
+    // Validate page (als meegegeven)
     if (pageRaw !== undefined && (!Number.isInteger(page) || page < 1)) {
       return res.status(400).json({ error: "page must be an integer >= 1" });
     }
 
+    // Parse & validate limit
     let limit;
     if (hasLimit) {
       limit = parseInt(limitRaw, 10);
@@ -180,7 +183,6 @@ router.get("/expenses", async (req, res) => {
     let pageCount = 1;
 
     if (!hasLimit) {
-
       page = 1;
       items = await Expense.find();
       pageCount = 1;
@@ -214,7 +216,6 @@ router.get("/expenses", async (req, res) => {
         collection: { href: base },
       },
     };
-
 
     if (hasLimit && pageCount > 1) {
       if (page < pageCount) {
