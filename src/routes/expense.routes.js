@@ -154,18 +154,67 @@ router.post("/seed", async (req, res) => {
 
 router.get("/expenses", async (req, res) => {
   try {
-    const expenses = await Expense.find();
-    res.json({
-      items: expenses.map(toExpenseListItem), 
+    const base = `${BASE_URL}/expenses`;
+
+    const pageRaw = req.query.page;
+    const limitRaw = req.query.limit;
+
+    const page = pageRaw ? parseInt(pageRaw, 10) : 1;
+    const limit = limitRaw !== undefined ? parseInt(limitRaw, 10) : undefined;
+
+    if (!Number.isInteger(page) || page < 1) {
+      return res.status(400).json({ error: "page must be an integer >= 1" });
+    }
+    if (limitRaw !== undefined && (!Number.isInteger(limit) || limit < 1)) {
+      return res.status(400).json({ error: "limit must be an integer >= 1" });
+    }
+
+    const totalItems = await Expense.countDocuments();
+
+    let expenses;
+    let totalPages;
+
+    if (limit === undefined) {
+      expenses = await Expense.find();
+      totalPages = totalItems === 0 ? 1 : 1;
+    } else {
+      totalPages = totalItems === 0 ? 1 : Math.ceil(totalItems / limit);
+
+      if (page > totalPages && totalItems > 0) {
+        return res.status(404).json({ error: "Page not found" });
+      }
+
+      const skip = (page - 1) * limit;
+      expenses = await Expense.find().skip(skip).limit(limit);
+    }
+
+    const params = new URLSearchParams();
+    if (pageRaw !== undefined) params.set("page", String(page));
+    if (limitRaw !== undefined) params.set("limit", String(limit));
+
+    const selfHref = params.toString() ? `${base}?${params.toString()}` : base;
+
+    return res.json({
+      items: expenses.map(toExpenseListItem),
+
+      pagination: {
+        page,
+        limit: limit ?? null,               
+        totalItems,
+        totalPages,
+        currentItems: expenses.length,
+      },
+
       _links: {
-        self: { href: `${BASE_URL}/expenses` },
-        collection: { href: `${BASE_URL}/expenses` },
+        self: { href: selfHref },           
+        collection: { href: base },         
       },
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: error.message });
   }
 });
+
     
 router.get("/expenses/:id", async (req, res) => {
   try {
