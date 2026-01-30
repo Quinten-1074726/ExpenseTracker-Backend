@@ -9,8 +9,6 @@ dotenv.config();
 const app = express();
 app.use(express.json());
 
-// Belangrijk: preflightContinue: true zodat cors() OPTIONS NIET afhandelt,
-// maar alleen headers zet en jouw router.options() kan antwoorden.
 app.use(
   cors({
     origin: "*",

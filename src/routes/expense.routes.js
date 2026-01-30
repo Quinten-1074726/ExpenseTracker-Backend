@@ -156,70 +156,79 @@ router.get("/expenses", async (req, res) => {
   try {
     const base = `${BASE_URL}/expenses`;
 
+    const hasLimit = req.query.limit !== undefined;
+
+    // parse query
     const pageRaw = req.query.page;
     const limitRaw = req.query.limit;
 
-    const page = pageRaw ? parseInt(pageRaw, 10) : 1;
-    const limit = limitRaw !== undefined ? parseInt(limitRaw, 10) : undefined;
+    let page = pageRaw ? parseInt(pageRaw, 10) : 1;
+    let limit = hasLimit ? parseInt(limitRaw, 10) : null;
 
-    if (!Number.isInteger(page) || page < 1) {
+    if (pageRaw !== undefined && (!Number.isInteger(page) || page < 1)) {
       return res.status(400).json({ error: "page must be an integer >= 1" });
     }
-    if (limitRaw !== undefined && (!Number.isInteger(limit) || limit < 1)) {
+
+    if (hasLimit && (!Number.isInteger(limit) || limit < 1)) {
       return res.status(400).json({ error: "limit must be an integer >= 1" });
     }
 
     const totalItems = await Expense.countDocuments();
 
-    let expenses;
-    let totalPages;
+    let items = [];
+    let pageCount = 1;
 
-    if (limit === undefined) {
-      if (page !== 1) {
-        return res.status(404).json({ error: "Page not found" });
-      }
-      expenses = await Expense.find();
-      totalPages = totalItems === 0 ? 1 : 1;
-      }
-      else {
-      totalPages = totalItems === 0 ? 1 : Math.ceil(totalItems / limit);
+    if (!hasLimit) {
+      page = 1;        
+      limit = null;    
 
-      if (page > totalPages && totalItems > 0) {
+      items = await Expense.find();
+      pageCount = 1;
+    } else {
+      pageCount = totalItems === 0 ? 1 : Math.ceil(totalItems / limit);
+
+      if (page > pageCount && totalItems > 0) {
         return res.status(404).json({ error: "Page not found" });
       }
 
       const skip = (page - 1) * limit;
-      expenses = await Expense.find().skip(skip).limit(limit);
+      items = await Expense.find().skip(skip).limit(limit);
     }
 
-    const params = new URLSearchParams();
-    if (pageRaw !== undefined) params.set("page", String(page));
-    if (limitRaw !== undefined) params.set("limit", String(limit));
+    let selfHref = `${BASE_URL}${req.originalUrl}`;
+    if (!hasLimit) selfHref = base;
 
-    const selfHref = params.toString() ? `${base}?${params.toString()}` : base;
-
-    return res.json({
-      items: expenses.map(toExpenseListItem),
-
+    const response = {
+      items: items.map(toExpenseListItem),
       pagination: {
         page,
-        limit: limit ?? null,               
+        limit,
         totalItems,
-        totalPages,
-        currentItems: expenses.length,
+        pageCount,
+        currentItems: items.length,
       },
-
       _links: {
-        self: { href: selfHref },           
-        collection: { href: base },         
+        self: { href: selfHref },
+        collection: { href: base },
       },
-    });
+    };
+
+    if (hasLimit && pageCount > 1) {
+      if (page < pageCount) {
+        response._links.next = { href: `${base}?page=${page + 1}&limit=${limit}` };
+      }
+      if (page > 1) {
+        response._links.prev = { href: `${base}?page=${page - 1}&limit=${limit}` };
+      }
+    }
+
+    return res.json(response);
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
 });
 
-    
+
 router.get("/expenses/:id", async (req, res) => {
   try {
     const expense = await Expense.findById(req.params.id);
