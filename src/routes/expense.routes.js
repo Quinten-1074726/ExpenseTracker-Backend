@@ -157,20 +157,21 @@ router.get("/expenses", async (req, res) => {
     const base = `${BASE_URL}/expenses`;
 
     const hasLimit = req.query.limit !== undefined;
-
-    // parse query
     const pageRaw = req.query.page;
     const limitRaw = req.query.limit;
 
     let page = pageRaw ? parseInt(pageRaw, 10) : 1;
-    let limit = hasLimit ? parseInt(limitRaw, 10) : null;
 
     if (pageRaw !== undefined && (!Number.isInteger(page) || page < 1)) {
       return res.status(400).json({ error: "page must be an integer >= 1" });
     }
 
-    if (hasLimit && (!Number.isInteger(limit) || limit < 1)) {
-      return res.status(400).json({ error: "limit must be an integer >= 1" });
+    let limit;
+    if (hasLimit) {
+      limit = parseInt(limitRaw, 10);
+      if (!Number.isInteger(limit) || limit < 1) {
+        return res.status(400).json({ error: "limit must be an integer >= 1" });
+      }
     }
 
     const totalItems = await Expense.countDocuments();
@@ -179,12 +180,12 @@ router.get("/expenses", async (req, res) => {
     let pageCount = 1;
 
     if (!hasLimit) {
-      page = 1;        
-      limit = null;    
 
+      page = 1;
       items = await Expense.find();
       pageCount = 1;
     } else {
+
       pageCount = totalItems === 0 ? 1 : Math.ceil(totalItems / limit);
 
       if (page > pageCount && totalItems > 0) {
@@ -195,23 +196,25 @@ router.get("/expenses", async (req, res) => {
       items = await Expense.find().skip(skip).limit(limit);
     }
 
-    let selfHref = `${BASE_URL}${req.originalUrl}`;
-    if (!hasLimit) selfHref = base;
+    const selfHref = hasLimit ? `${BASE_URL}${req.originalUrl}` : base;
+
+    const pagination = {
+      page,
+      totalItems,
+      pageCount,
+      currentItems: items.length,
+      ...(hasLimit ? { limit } : {}), 
+    };
 
     const response = {
       items: items.map(toExpenseListItem),
-      pagination: {
-        page,
-        limit,
-        totalItems,
-        pageCount,
-        currentItems: items.length,
-      },
+      pagination,
       _links: {
         self: { href: selfHref },
         collection: { href: base },
       },
     };
+
 
     if (hasLimit && pageCount > 1) {
       if (page < pageCount) {
