@@ -177,18 +177,14 @@ router.get("/expenses", async (req, res) => {
     const totalItems = await Expense.countDocuments();
 
     let items = [];
-    let pagecount = 1;
 
     if (!hasLimit) {
       page = 1;
       items = await Expense.find();
-
-      // ✅ KEY CHANGE
-      pagecount = totalItems; 
     } else {
-      pagecount = totalItems === 0 ? 1 : Math.ceil(totalItems / limit);
+      const pageCount = totalItems === 0 ? 1 : Math.ceil(totalItems / limit);
 
-      if (page > pagecount && totalItems > 0) {
+      if (page > pageCount && totalItems > 0) {
         return res.status(404).json({ error: "Page not found" });
       }
 
@@ -198,11 +194,20 @@ router.get("/expenses", async (req, res) => {
 
     const selfHref = hasLimit ? `${BASE_URL}${req.originalUrl}` : base;
 
+    const computedPageCount =
+      hasLimit
+        ? (totalItems === 0 ? 1 : Math.ceil(totalItems / limit))
+        : (items.length === 0 ? 1 : Math.ceil(totalItems / items.length));
+
     const pagination = {
       page,
       totalItems,
-      pagecount,
       currentItems: items.length,
+
+      pagecount: computedPageCount,
+      pageCount: computedPageCount,
+      totalPages: computedPageCount,
+
       ...(hasLimit ? { limit } : {}),
     };
 
@@ -215,8 +220,8 @@ router.get("/expenses", async (req, res) => {
       },
     };
 
-    if (hasLimit && pagecount > 1) {
-      if (page < pagecount) {
+    if (hasLimit && computedPageCount > 1) {
+      if (page < computedPageCount) {
         response._links.next = { href: `${base}?page=${page + 1}&limit=${limit}` };
       }
       if (page > 1) {
