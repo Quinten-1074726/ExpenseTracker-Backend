@@ -43,7 +43,6 @@ function toExpenseListItem(expense) {
   return {
     id: String(expense._id),
     title: expense.title,
-    description: expense.description,
     amount: expense.amount,
     date: expense.date,
     category: expense.category,
@@ -52,7 +51,6 @@ function toExpenseListItem(expense) {
     },
   };
 }
-
 
 function asNonEmptyString(v) {
   if (typeof v === "number") return String(v);
