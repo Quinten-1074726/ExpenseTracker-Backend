@@ -33,6 +33,11 @@ function unauthorized(res, message = "Unauthorized") {
   return res.status(401).json({ error: message });
 }
 
+function unauthorizedBearer(res, message = "Unauthorized") {
+  res.set("WWW-Authenticate", 'Bearer realm="secure"');
+  return res.status(401).json({ error: message });
+}
+
 function parseBasicAuth(authHeader) {
   const [type, value] = (authHeader || "").split(" ");
   if (type !== "Basic" || !value) return null;
@@ -52,7 +57,7 @@ function requireJwt(req, res, next) {
   const [type, token] = auth.split(" ");
 
   if (type !== "Bearer" || !token) {
-    return res.status(401).json({ error: "Missing Bearer token" });
+    return unauthorizedBearer(res, "Missing Bearer token");
   }
 
   try {
@@ -60,10 +65,9 @@ function requireJwt(req, res, next) {
     req.user = payload;
     return next();
   } catch (e) {
-    return res.status(401).json({ error: "Invalid or expired token" });
+    return unauthorizedBearer(res, "Invalid or expired token");
   }
 }
-
 
 function toExpenseResource(expense) {
   return {
@@ -143,7 +147,7 @@ router.options("/expenses", (req, res) => {
   res.set("Allow", "GET,POST,OPTIONS");
   res.set("Access-Control-Allow-Origin", "*");
   res.set("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-  res.set("Access-Control-Allow-Headers", "Content-Type, Accept");
+  res.set("Access-Control-Allow-Headers", "Content-Type, Accept, Authorization");
   return res.sendStatus(204);
 });
 
@@ -152,7 +156,7 @@ router.options("/expenses/:id", (req, res) => {
   res.set("Allow", "GET,PUT,DELETE,OPTIONS");
   res.set("Access-Control-Allow-Origin", "*");
   res.set("Access-Control-Allow-Methods", "GET,PUT,DELETE,OPTIONS");
-  res.set("Access-Control-Allow-Headers", "Content-Type, Accept");
+  res.set("Access-Control-Allow-Headers", "Content-Type, Accept, Authorization");
   return res.sendStatus(204);
 });
 
