@@ -1,6 +1,6 @@
 import express from 'express';
 import Expense from '../models/Expense.js';
-import { de } from '@faker-js/faker';
+import jwt from "jsonwebtoken";
 
 function requireJsonHeader(req, res, next) {
   if (req.method === "OPTIONS") return next();  
@@ -21,6 +21,49 @@ function requireJsonContentType(req, res, next) {
 }
 
 const BASE_URL = process.env.BASE_URL || "http://145.24.237.232:8001";
+
+const JWT_SECRET = process.env.JWT_SECRET || "dev_secret";
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "1h";
+
+const DEMO_USER = "admin";
+const DEMO_PASS = "admin";
+
+function unauthorized(res, message = "Unauthorized") {
+  res.set("WWW-Authenticate", 'Basic realm="login"');
+  return res.status(401).json({ error: message });
+}
+
+function parseBasicAuth(authHeader) {
+  const [type, value] = (authHeader || "").split(" ");
+  if (type !== "Basic" || !value) return null;
+
+  const decoded = Buffer.from(value, "base64").toString("utf8");
+  const idx = decoded.indexOf(":");
+  if (idx < 0) return null;
+
+  return {
+    username: decoded.slice(0, idx),
+    password: decoded.slice(idx + 1),
+  };
+}
+
+function requireJwt(req, res, next) {
+  const auth = req.headers.authorization || "";
+  const [type, token] = auth.split(" ");
+
+  if (type !== "Bearer" || !token) {
+    return res.status(401).json({ error: "Missing Bearer token" });
+  }
+
+  try {
+    const payload = jwt.verify(token, JWT_SECRET);
+    req.user = payload;
+    return next();
+  } catch (e) {
+    return res.status(401).json({ error: "Invalid or expired token" });
+  }
+}
+
 
 function toExpenseResource(expense) {
   return {
@@ -58,8 +101,43 @@ function asNonEmptyString(v) {
   return v.trim();
 }
 
+
+//ROUTES
 const router = express.Router();
 router.use(['/expenses', '/expenses/:id', '/seed'], requireJsonHeader, requireJsonContentType);
+
+router.post("/login", (req, res) => {
+  const auth = req.headers.authorization;
+  if (!auth) return unauthorized(res, "Missing Authorization header");
+
+  const creds = parseBasicAuth(auth);
+  if (!creds) return unauthorized(res, "Invalid Basic auth");
+
+  const ok = creds.username === DEMO_USER && creds.password === DEMO_PASS;
+  if (!ok) return unauthorized(res, "Invalid username or password");
+
+  const token = jwt.sign(
+    { sub: creds.username }, 
+    JWT_SECRET,
+    { expiresIn: JWT_EXPIRES_IN }
+  );
+
+  return res.json({
+    access_token: token,
+    token_type: "Bearer",
+    expires_in: 3600,
+  });
+});
+
+router.get("/secure", requireJwt, (req, res) => {
+  res.json({
+    message: "You have access",
+    user: req.user?.sub ?? null,
+    _links: {
+      self: { href: `${BASE_URL}/secure` },
+    },
+  });
+});
 
 router.options("/expenses", (req, res) => {
   res.set("Allow", "GET,POST,OPTIONS");
