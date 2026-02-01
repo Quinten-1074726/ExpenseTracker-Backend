@@ -108,7 +108,7 @@ function asNonEmptyString(v) {
 
 //ROUTES
 const router = express.Router();
-router.use(['/expenses', '/expenses/:id', '/seed'], requireJsonHeader, requireJsonContentType);
+router.use(['/expenses', '/expenses/:id', '/seed', '/login', '/secure'], requireJsonHeader, requireJsonContentType);
 
 router.post("/login", (req, res) => {
   const auth = req.headers.authorization;
