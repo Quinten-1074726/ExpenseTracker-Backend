@@ -25,8 +25,8 @@ const BASE_URL = process.env.BASE_URL || "http://145.24.237.232:8001";
 const JWT_SECRET = process.env.JWT_SECRET || "dev_secret";
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "1h";
 
-const DEMO_USER = "admin";
-const DEMO_PASS = "admin";
+const DEMO_USER = "user";
+const DEMO_PASS = "password";
 
 function unauthorized(res, message = "Unauthorized") {
   res.set("WWW-Authenticate", 'Basic realm="login"');
@@ -108,7 +108,7 @@ function asNonEmptyString(v) {
 
 //ROUTES
 const router = express.Router();
-router.use(['/expenses', '/expenses/:id', '/seed', '/login', '/secure'], requireJsonHeader, requireJsonContentType);
+router.use(['/expenses', '/expenses/:id', '/seed'], requireJsonHeader, requireJsonContentType);
 
 router.post("/login", (req, res) => {
   const auth = req.headers.authorization;
@@ -143,6 +143,25 @@ router.get("/secure", requireJwt, (req, res) => {
   });
 });
 
+// OPTIONS LOGIN
+
+router.options("/login", (req, res) => {
+  res.set("Allow", "POST,OPTIONS");
+  res.set("Access-Control-Allow-Origin", "*");
+  res.set("Access-Control-Allow-Methods", "POST,OPTIONS");
+  res.set("Access-Control-Allow-Headers", "Authorization, Accept, Content-Type");
+  return res.sendStatus(204);
+});
+
+router.options("/secure", (req, res) => {
+  res.set("Allow", "GET,OPTIONS");
+  res.set("Access-Control-Allow-Origin", "*");
+  res.set("Access-Control-Allow-Methods", "GET,OPTIONS");
+  res.set("Access-Control-Allow-Headers", "Authorization, Accept, Content-Type");
+  return res.sendStatus(204);
+});
+
+// OPTIONS collection
 router.options("/expenses", (req, res) => {
   res.set("Allow", "GET,POST,OPTIONS");
   res.set("Access-Control-Allow-Origin", "*");
@@ -160,6 +179,7 @@ router.options("/expenses/:id", (req, res) => {
   return res.sendStatus(204);
 });
 
+// ROUTERS not allowed methods
 router.all("/expenses", (req, res, next) => {
   if (["GET", "POST", "OPTIONS"].includes(req.method)) return next();
   res.set("Allow", "GET,POST,OPTIONS");
